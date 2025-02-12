@@ -132,6 +132,44 @@ const editarCompra = async (req, res) => {
 const eliminarProducto = async (req, res) => {
     const id = req.params.id;
     try {
+
+        // obtener el precio del producto y el id de la compra
+        const precio = await prisma.product.findUnique({
+            where:{
+                id: parseInt(id)
+                
+            }, 
+            select:{
+                purchaseId:true,
+                price:true
+            }
+        });
+
+        // obtener el precio de la compra
+        const obtenerPrecio = await prisma.purchase.findUnique({
+            where:{
+                id: precio.purchaseId
+            },
+            select:{
+                price:true
+            }
+        });
+
+        // restar el precio del producto al precio de la compra
+        const nuevoPrecio = obtenerPrecio.price - precio.price;
+        
+        // actualizar el precio de la compra
+        await prisma.purchase.update({
+            where:{
+                id: precio.purchaseId
+            },
+            data:{
+                price: nuevoPrecio
+            }
+
+        });
+        
+        //eliminar el producto 
         const respuesta = await prisma.product.delete({
             where:{
                 id: parseInt(id)
