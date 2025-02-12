@@ -17,13 +17,32 @@ const crearAbono = async (req, res) => {
         }
     });
 
-    res.status(200).json(respuesta);
+const debtmiss = await prisma.purchase.findUnique({
+        where: {
+            id: purchase_id
+        },
+        select: {
+            debt: true
+        }
+    });
+
+    if (debtmiss.debt == 0) {
+        const respuesta = await prisma.purchase.update({
+            where: {
+                id: purchase_id
+            },
+            data: {
+                status: 'pagado'
+            }
+        });
+    }
+res.status(200).json(respuesta);
 }
+
 
 // Actualizar la deuda de la compra.
 
 const deudaCompra = async (cantidad, id) => {
-    console.log(cantidad, id);
     const compra = await prisma.purchase.findUnique({
         where: {
             id: parseInt(id)
@@ -197,9 +216,28 @@ const editarAbono = async (req, res) => {
                 amount: true
             }
         });
-        console.log(abonoAnterior);
         // Restaurar el valor de la deuda
         await deudaCompra(-abonoAnterior.amount, purchaseId);
+
+        const debtmiss2 = await prisma.purchase.findUnique({
+            where: {
+                id: purchaseId
+            },
+            select: {
+                debt: true
+            }
+        }); 
+        if (debtmiss2.debt ==! 0) 
+            {
+            const respuesta = await prisma.purchase.update({
+                where: {
+                    id: purchaseId
+                },
+                data: {
+                    status: 'pendiente'
+                }
+            });
+        }
         // Actualizar abono
         const ActualizarAbono = async (id, purchase_id, amount) => {
             const respuesta = await prisma.payment.update({
@@ -214,6 +252,25 @@ const editarAbono = async (req, res) => {
             await deudaCompra(respuesta.amount, purchaseId);
         }
         ActualizarAbono(id, purchaseId, amount);
+
+        const debtmiss = await prisma.purchase.findUnique({
+            where: {
+                id: purchaseId
+            },
+            select: {
+                debt: true
+            }
+        });
+        if (debtmiss.debt == 0) {
+            const respuesta = await prisma.purchase.update({
+                where: {
+                    id: purchaseId
+                },
+                data: {
+                    status: 'pagado'
+                }
+            });
+        }
 
         res.status(200).json(respuesta);
     } catch (error) {

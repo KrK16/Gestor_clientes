@@ -23,7 +23,7 @@ model purchase {
     id        Int      @id @default(autoincrement())
     price    Float
     custormerId Int
-    status    String
+    status    String   @default("pendiente")
     debt      Float 
     createdAt DateTime @default(now())
     customer  customer @relation(fields: [custormerId], references: [id])

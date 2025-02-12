@@ -3,7 +3,6 @@ const { response } = require('express');
 const prisma = new PrismaClient();
 
 
-
 const obtenerCompras = async (req, res) => {
     const respuesta = await prisma.purchase.findMany({
         include:{
@@ -17,13 +16,12 @@ const obtenerCompras = async (req, res) => {
 // agregar compras con los productos.
 
 const agregarCompra = async (req, res) => {
-    const {customer_id, status, productos, name} = req.body;
+    const {customer_id,  productos, name} = req.body;
         let precioTotal = precioCompra(productos);
         const respuesta = await prisma.purchase.create({
             data:{
                 custormerId: customer_id,
                 price: precioTotal,
-                status: status,
                 name: name,
                 debt: precioTotal,
                 products:{
@@ -42,13 +40,18 @@ const agregarCompra = async (req, res) => {
         res.status(200).json(respuesta);
     
 }
+/*
+Lo que quiero es que cuando se agregue una compra se asigne
+el precio de total de la compra en base al precio de los productos y la cantidad.
+ */
 
 // Agregar precio total de la compra
 
 const precioCompra = (productos) => {
     let precio = 0;
     productos.forEach(producto => {
-        precio += producto.price;
+        precio += producto.price * producto.quantity;
+        
     });
     return precio;
 }
@@ -79,7 +82,6 @@ const eliminarCompra = async (req, res) => {
         res.status(200).json(respuesta);
     } catch (error) {
         res.status(400).json({error: 'No se pudo eliminar la compra'});
-         console.error(error); 
     }
     
 }
@@ -88,8 +90,8 @@ const eliminarCompra = async (req, res) => {
 
 const editarCompra = async (req, res) => {
     const id = req.params.id;
-    const {customer_id, price, status, productos} = req.body;
-    console.log(req.body);
+    let precioTotal = precioCompra(req.body.productos);
+    const {customer_id, status , productos} = req.body;
     try {
         const respuesta = await prisma.purchase.update({
             where:{
@@ -97,8 +99,9 @@ const editarCompra = async (req, res) => {
             },
             data:{
                 custormerId: customer_id,
-                price: price,
+                price: precioTotal,
                 status: status,
+                debt: precioTotal,
                 products: {
                     upsert: productos.map((producto) => ({
                         where: { id: producto.product_id },
@@ -124,8 +127,6 @@ const editarCompra = async (req, res) => {
         res.status(400).json({error: 'No se pudo actualizar la compra'});
     }
 }
-
-
 
 //eliminar productos individuales, no se está actualizando el precio de la compra. 
 
@@ -155,7 +156,7 @@ const eliminarProducto = async (req, res) => {
             }
         });
 
-        // restar el precio del producto al precio de la compra
+        // restar el precio del producto al precio de la compra 
         const nuevoPrecio = obtenerPrecio.price - precio.price;
         
         // actualizar el precio de la compra
@@ -199,7 +200,7 @@ const obtenerCompraPorId = async (req, res) => {
     }
 }
 
-// Obtener compras por ide de cliente
+// Obtener compras por id de cliente
 
 const obtenerComprasUsuarioID = async (req, res) => {
     const id = req.params.id
