@@ -6,7 +6,8 @@ const prisma = new PrismaClient();
 const obtenerCompras = async (req, res) => {
     const respuesta = await prisma.purchase.findMany({
         include:{
-            products: true
+            products: true,
+            customer: true,
         }
     });
     res.status(200).json(respuesta);
@@ -56,6 +57,47 @@ const precioCompra = (productos) => {
     return precio;
 }
 
+// agregar compra con cliente
+
+const agregarCompraClienteNuevo = async (req, res) => {
+    const data = req.body;
+    let precioTotal = precioCompra(data.productos);
+
+    try {
+
+        const respuestaCliente = await prisma.customer.create({
+            data:{
+                name: data.name,
+                phone: data.phone
+            }
+        })
+
+        const respuesta = await prisma.purchase.create({
+            data:{
+                custormerId: respuestaCliente.id,
+                name: data.nameCompra,
+                price: precioTotal,
+                debt: precioTotal,
+                products:{
+                    create: data.productos.map((producto) => ({
+                        name: producto.name,
+                        quantity: producto.quantity,
+                        price: producto.price
+                    }))
+                }
+            },
+            include:{
+                products: true
+            }
+        });
+        res.status(200).json(respuesta);
+    } catch (error) {
+        res.status(400).json({error: 'No se pudo agregar la compra'});
+    }
+
+
+}
+
 // Eliminar compras
 
 const eliminarCompra = async (req, res) => {
@@ -88,45 +130,47 @@ const eliminarCompra = async (req, res) => {
 
 // Editar una compra
 
-const editarCompra = async (req, res) => {
-    const id = req.params.id;
-    let precioTotal = precioCompra(req.body.productos);
-    const {customer_id, status , productos} = req.body;
-    try {
-        const respuesta = await prisma.purchase.update({
-            where:{
-                id: parseInt(id)
-            },
-            data:{
-                custormerId: customer_id,
-                price: precioTotal,
-                status: status,
-                debt: precioTotal,
-                products: {
-                    upsert: productos.map((producto) => ({
-                        where: { id: producto.product_id },
-                        update: {
-                            name: producto.name,
-                            quantity: producto.quantity,
-                            price: producto.price
-                        },
-                        create: {
-                            name: producto.name,
-                            quantity: producto.quantity,
-                            price: producto.price
-                        }
-                    }))
+    const editarCompra = async (req, res) => {
+        const id = req.params.id;
+        let precioTotal = precioCompra(req.body.productos);
+        const {customer_id, status , productos, purchaseName} = req.body;
+
+        try {
+            const respuesta = await prisma.purchase.update({
+                where:{
+                    id: parseInt(id)
+                },
+                data:{
+                    custormerId: customer_id,
+                    name: purchaseName,
+                    price: precioTotal,
+                    status: status,
+                    debt: precioTotal,      
+                    products: {
+                        upsert: productos.map((producto) => ({
+                            where: { id: producto.product_id },
+                            update: {
+                                name: producto.name,
+                                quantity: producto.quantity,
+                                price: producto.price
+                            },
+                            create: {
+                                name: producto.name,
+                                quantity: producto.quantity,
+                                price: producto.price
+                            }
+                        }))
+                    }
+                },
+                include:{
+                    products: true
                 }
-            },
-            include:{
-                products: true
-            }
-        });
-        res.status(200).json(respuesta);
-    } catch (error) {
-        res.status(400).json({error: 'No se pudo actualizar la compra'});
+            });
+            res.status(200).json(respuesta);
+        } catch (error) {
+            res.status(400).json({error: 'No se pudo actualizar la compra'});
+        }
     }
-}
 
 //eliminar productos individuales, no se está actualizando el precio de la compra. 
 
@@ -230,5 +274,5 @@ const obtenerComprasPorRevista = async (req, res) => {
 
 // Exportar los modulos para los routes.
 
-module.exports = {agregarCompra, eliminarCompra, editarCompra, eliminarProducto, obtenerCompras, obtenerCompraPorId, obtenerComprasUsuarioID, obtenerComprasPorRevista};
+module.exports = {agregarCompra, eliminarCompra, editarCompra, eliminarProducto, obtenerCompras, obtenerCompraPorId, obtenerComprasUsuarioID, obtenerComprasPorRevista, agregarCompraClienteNuevo};
 

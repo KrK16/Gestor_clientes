@@ -3,6 +3,16 @@ const app = express();
 const clienteRoute = require("./routes/clienteRoutes");
 const comprasRoute = require("./routes/comprasRoutes");
 const abonoRoute = require("./routes/abonoRoutes");
+const cors = require("cors");
+
+
+app.use(cors(
+    {
+        origin: "*",
+        methods: "GET,POST,PUT,DELETE",
+        allowedHeaders: "Content-Type, Authorization"
+    }
+));
 
 app.use(express.json());
 

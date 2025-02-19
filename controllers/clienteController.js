@@ -28,13 +28,27 @@ const agregarCliente = async (req, res) => {
 
 const consultarCliente = async (req, res) => {
     try {
-        repuesta = await prisma.customer.findMany();
+        const respuesta = await prisma.customer.findMany();
 
         res.status(200).json(respuesta);
 
     } catch (error) {
         res.status(400).json({error: 'No se pudo consultar el cliente'});
+        console.error(error);
     }
+}
+
+// consultar cliente por id
+
+const consultarClienteId = async (req, res) => {
+    const id = req.params.id;
+    const respuesta = await prisma.customer.findUnique({
+        where:{
+            id: parseInt(id)
+        }
+        
+    });
+    res.send(respuesta);
 }
 
 // actaulizar cliente
@@ -80,5 +94,5 @@ const eliminarCliente = async (req, res) => {
     }
 }
 
-module.exports={agregarCliente, consultarCliente, actualizarCliente, eliminarCliente};
+module.exports={agregarCliente, consultarCliente, consultarClienteId, actualizarCliente, eliminarCliente};
 

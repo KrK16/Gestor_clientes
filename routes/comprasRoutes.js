@@ -10,6 +10,6 @@ router.get("/", comprasController.obtenerCompras);
 router.get("/:id", comprasController.obtenerCompraPorId);
 router.get("/compraU/:id", comprasController.obtenerComprasUsuarioID);
 router.get("/compraR/:name", comprasController.obtenerComprasPorRevista);
-
+router.post("/compraNCliente", comprasController.agregarCompraClienteNuevo);
 
 module.exports = router;

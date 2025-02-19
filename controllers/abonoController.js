@@ -292,6 +292,90 @@ cambiar status a pagado
 
 */
 
+const consultarAbonosAgrupados = async (req, res) => {
+    try {
+        const respuesta = await prisma.payment.findMany({
+            include: {
+                purchase: {
+                    include: {
+                        customer: true
+                    }
+                }
+            }
+        });
+
+        // Agrupar los abonos por cliente
+        const abonosAgrupados = respuesta.reduce((acc, abono) => {
+            const customerId = abono.purchase.customer.id;
+            const customerName = abono.purchase.customer.name;
+            
+            if (!acc[customerId]) {
+                acc[customerId] = {
+                    customer: {
+                        id: customerId,
+                        name: customerName
+                    },
+                    payments: []
+                };
+            }
+            
+            acc[customerId].payments.push({
+                id: abono.id,
+                amount: abono.amount,
+                purchaseId: abono.purchaseId,
+                createdAt: abono.createdAt
+            });
+            
+            return acc;
+        }, {});
+
+        res.status(200).json(Object.values(abonosAgrupados));
+    } catch (error) {
+        res.status(400).json({ 
+            error: 'No se pudieron consultar los abonos agrupados',
+            details: error.message 
+        });
+    }
+}
+
+// Don't forget to add this to your module.exports
+
+
+const consultarAbonosCompra = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const respuesta = await prisma.payment.findMany({
+            where: {
+                purchaseId: parseInt(id)
+            },
+            include: {
+                purchase: {
+                    include: {
+                        customer: true
+                    }
+                }
+            },
+            orderBy: {
+                createdAt: 'desc'
+            }
+        });
+
+        if (!respuesta.length) {
+            return res.status(404).json({ 
+                message: 'No se encontraron abonos para esta compra' 
+            });
+        }
+
+        res.status(200).json(respuesta);
+    } catch (error) {
+        res.status(400).json({ 
+            error: 'Error al consultar los abonos de la compra',
+            details: error.message 
+        });
+    }
+}
+
+
 const pagarCompras = async (req, res) => {
     const custormerid = req.param.id;
 
@@ -345,5 +429,6 @@ const pagarCompras = async (req, res) => {
 
 
 
-module.exports = { crearAbono, consultarAbonosC, editarAbono, eliminarAbono, consultarAbonos, pagarCompras };
+
+module.exports = { crearAbono, consultarAbonosC, editarAbono, eliminarAbono, consultarAbonos, pagarCompras, consultarAbonosAgrupados, consultarAbonosCompra };
 

@@ -4,6 +4,7 @@ const clienteController = require("../controllers/clienteController")
 
 router.post("/", clienteController.agregarCliente);
 router.get("/", clienteController.consultarCliente);
+router.get("/:id", clienteController.consultarClienteId);
 router.put("/:id", clienteController.actualizarCliente);
 router.delete("/:id", clienteController.eliminarCliente);
 
