@@ -11,9 +11,11 @@ CREATE TABLE "purchase" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "price" REAL NOT NULL,
     "custormerId" INTEGER NOT NULL,
-    "status" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'pendiente',
     "debt" REAL NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "payday" DATETIME NOT NULL,
+    "orderdate" DATETIME NOT NULL,
     "name" TEXT NOT NULL,
     CONSTRAINT "purchase_custormerId_fkey" FOREIGN KEY ("custormerId") REFERENCES "customer" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );

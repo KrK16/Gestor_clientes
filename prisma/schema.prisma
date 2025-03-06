@@ -27,6 +27,8 @@ model purchase {
     debt      Float 
     createdAt DateTime @default(now())
     customer  customer @relation(fields: [custormerId], references: [id])
+    payday    DateTime 
+    orderdate DateTime  
     products  product[]
     payments  payment[]
     name      String  // Signfica que es opcional.

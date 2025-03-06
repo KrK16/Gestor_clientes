@@ -5,44 +5,76 @@ const prisma = new PrismaClient();
 // Crear un abono a una compra
 
 const crearAbono = async (req, res) => {
-    const { purchase_id, amount } = req.body;
-    deudaCompra(amount, purchase_id);
-    const respuesta = await prisma.payment.create({
-        data: {
-            purchaseId: purchase_id,
-            amount: amount
-        },
-        include: {
-            purchase: true
-        }
-    });
+    const { purchase_id, amount, date } = req.body;
+    try {
+        console.log(req.body)
 
-const debtmiss = await prisma.purchase.findUnique({
-        where: {
-            id: purchase_id
-        },
-        select: {
-            debt: true
-        }
-    });
+        const fecha = new Date(date).toISOString();
 
-    if (debtmiss.debt == 0) {
-        const respuesta = await prisma.purchase.update({
-            where: {
+        const deuda = await prisma.purchase.findUnique({
+            where:{
                 id: purchase_id
             },
-            data: {
-                status: 'pagado'
+            select:{
+                debt: true
             }
-        });
-    }
-res.status(200).json(respuesta);
-}
+        })
+        console.log("deuda", deuda.debt);
 
+        const resta = deuda.debt - amount;
+        console.log("resta", resta);
+
+        if (resta >= 0) {
+            const respuesta = await prisma.payment.create({
+                data: {
+                    purchaseId: purchase_id,
+                    amount: amount,
+                    createdAt: fecha
+                },
+                include: {
+                    purchase: true
+                }
+            });
+
+            await deudaCompra(amount, purchase_id);
+        
+            const debtmiss = await prisma.purchase.findUnique({
+                    where: {
+                        id: purchase_id
+                    },
+                    select: {
+                        debt: true
+                    }
+                });
+            console.log("esta es la deuda en debtmiss", debtmiss.debt);
+        
+            if (debtmiss.debt === 0) {
+            const estado =  await prisma.purchase.update({
+                    where: {
+                        id: purchase_id
+                    },
+                    data: {
+                        status: "pagado"
+                    }
+                });
+                console.log("el estado es:", estado.status);
+            }
+            //console.log("es igual a cero")
+        res.status(200).json(respuesta);
+        } 
+        else {
+            res.status(400).json("El monto del abono no puede ser mayor que la deuda")
+        }
+    } catch (error) {
+        console.error("Error creating payment:", error);
+        res.status(500).json({ error: "Failed to create payment" });
+    }
+}
 
 // Actualizar la deuda de la compra.
 
 const deudaCompra = async (cantidad, id) => {
+    console.log("deudacompra cantidad", cantidad);
     const compra = await prisma.purchase.findUnique({
         where: {
             id: parseInt(id)
@@ -51,22 +83,24 @@ const deudaCompra = async (cantidad, id) => {
             debt: true
         }
     });
+    console.log("deudacompra debt", compra.debt);
 
     const deuda = compra.debt - cantidad;
 
     const respuesta = await prisma.purchase.update({
         where: {
-            id: id
+            id: parseInt(id)
         },
         data: {
             debt: deuda
 
         }
     });
+    console.log("actaulizacion deuda", respuesta.debt);
+    return respuesta;
 }
 
 // Consultar abonos por cliente.
-
 const consultarAbonosC = async (req, res) => {
     const id = req.params.id;
     try {
@@ -84,7 +118,6 @@ const consultarAbonosC = async (req, res) => {
 }
 
 // Eliminar abono
-
 const eliminarAbono = async (req, res) => {
     const { id } = req.params;
     try {
@@ -132,7 +165,6 @@ const eliminarAbono = async (req, res) => {
     }
 }
 
-
 // consultar abonos
 const consultarAbonos = async (req, res) => {
     try {
@@ -144,140 +176,76 @@ const consultarAbonos = async (req, res) => {
 }
 
 // Editar abono
-/*const editarAbono = async (req, res) => {
+const editarAbono = async (req, res) => {
     const id = req.params.id;
-    const { purchase_id, amount } = req.body;
-
+    const { purchaseId, amount, date } = req.body;
+    
     try {
-        // Obtener la deuda actual 
-        const compra = await prisma.purchase.findUnique({
-            where: {
-                id: parseInt(purchase_id)
-            },
-            select: {               90, 40, 50.
-                debt: true          
-            }
-        });
-
-        // Obtener el abono anterior.
+        // Get original payment
         const abonoAnterior = await prisma.payment.findUnique({
             where: {
                 id: parseInt(id)
             },
             select: {
-                amount: true
+                amount: true,
+                purchaseId: true
             }
         });
-
-
-        // Calcular la nueva deuda
-        const nuevaDeuda = compra.debt + abonoAnterior.amount - amount;
-
-        // Actualizar la deuda de la compra
-        await prisma.purchase.update({
+        
+        if (!abonoAnterior) {
+            return res.status(404).json({ error: "Abono no encontrado" });
+        }
+        
+        // First restore the original debt by adding back the previous payment
+        await deudaCompra(-abonoAnterior.amount, purchaseId);
+        
+        // Check if new amount is valid for current debt
+        const deudaActual = await prisma.purchase.findUnique({
             where: {
-                id: parseInt(purchase_id)
+                id: purchaseId
             },
-            data: {
-                debt: nuevaDeuda
+            select: {
+                debt: true
             }
         });
-
-        // Actualizar el abono
+        
+        const nuevaDeuda = deudaActual.debt - amount;
+        
+        if (nuevaDeuda < 0) {
+            return res.status(400).json("El monto del abono no puede ser mayor que la deuda");
+        }
+        
+        // Update payment record
+        const fecha = new Date(date).toISOString();
         const respuesta = await prisma.payment.update({
             where: {
                 id: parseInt(id)
             },
             data: {
-                purchaseId: purchase_id,
-                amount: amount
+                purchaseId: parseInt(purchaseId),
+                amount: amount,
+                createdAt: fecha
             }
         });
-
-        res.status(200).json(respuesta);
-    } catch (error) {
-        res.status(400).json({ error: 'No se pudo editar el abono' });
-        console.error(error);
-    }
-} */
-
-
-// Editar abono 2
-const editarAbono = async (req, res) => {
-    const id = req.params.id;
-    const { purchaseId, amount } = req.body;
-    try {
-        //Obtener el abono que se quiere cambiar, abono anterior.
-        const abonoAnterior = await prisma.payment.findUnique({
-            where: {
-                id: parseInt(id)
-            },
-            select: {
-                amount: true
-            }
-        });
-        // Restaurar el valor de la deuda
-        await deudaCompra(-abonoAnterior.amount, purchaseId);
-
-        const debtmiss2 = await prisma.purchase.findUnique({
+        
+        // Apply the new payment to debt
+        const resultadoDeuda = await deudaCompra(amount, purchaseId);
+        
+        // Update purchase status based on remaining debt
+        await prisma.purchase.update({
             where: {
                 id: purchaseId
             },
-            select: {
-                debt: true
-            }
-        }); 
-        if (debtmiss2.debt ==! 0) 
-            {
-            const respuesta = await prisma.purchase.update({
-                where: {
-                    id: purchaseId
-                },
-                data: {
-                    status: 'pendiente'
-                }
-            });
-        }
-        // Actualizar abono
-        const ActualizarAbono = async (id, purchase_id, amount) => {
-            const respuesta = await prisma.payment.update({
-                where: {
-                    id: parseInt(id)
-                },
-                data: {
-                    purchaseId: parseInt(purchase_id),
-                    amount: amount
-                }
-            });
-            await deudaCompra(respuesta.amount, purchaseId);
-        }
-        ActualizarAbono(id, purchaseId, amount);
-
-        const debtmiss = await prisma.purchase.findUnique({
-            where: {
-                id: purchaseId
-            },
-            select: {
-                debt: true
+            data: {
+                status: resultadoDeuda.debt === 0 ? 'pagado' : 'pendiente'
             }
         });
-        if (debtmiss.debt == 0) {
-            const respuesta = await prisma.purchase.update({
-                where: {
-                    id: purchaseId
-                },
-                data: {
-                    status: 'pagado'
-                }
-            });
-        }
-
+        
         res.status(200).json(respuesta);
     } catch (error) {
-        res.status(400).json(error);
-        console.error(error);
+        console.error("Error updating payment:", error);
+        res.status(500).json({ error: 'No se pudo editar el abono' });
     }
-
 }
 
 
@@ -304,7 +272,6 @@ const consultarAbonosAgrupados = async (req, res) => {
             }
         });
 
-        // Agrupar los abonos por cliente
         const abonosAgrupados = respuesta.reduce((acc, abono) => {
             const customerId = abono.purchase.customer.id;
             const customerName = abono.purchase.customer.name;
@@ -338,7 +305,6 @@ const consultarAbonosAgrupados = async (req, res) => {
     }
 }
 
-// Don't forget to add this to your module.exports
 
 
 const consultarAbonosCompra = async (req, res) => {
