@@ -7,7 +7,6 @@ const prisma = new PrismaClient();
 const crearAbono = async (req, res) => {
     const { purchase_id, amount, date } = req.body;
     try {
-        console.log(req.body)
 
         const fecha = new Date(date).toISOString();
 
@@ -19,10 +18,8 @@ const crearAbono = async (req, res) => {
                 debt: true
             }
         })
-        console.log("deuda", deuda.debt);
 
         const resta = deuda.debt - amount;
-        console.log("resta", resta);
 
         if (resta >= 0) {
             const respuesta = await prisma.payment.create({
@@ -46,7 +43,6 @@ const crearAbono = async (req, res) => {
                         debt: true
                     }
                 });
-            console.log("esta es la deuda en debtmiss", debtmiss.debt);
         
             if (debtmiss.debt === 0) {
             const estado =  await prisma.purchase.update({
@@ -57,7 +53,6 @@ const crearAbono = async (req, res) => {
                         status: "pagado"
                     }
                 });
-                console.log("el estado es:", estado.status);
             }
             //console.log("es igual a cero")
         res.status(200).json(respuesta);
@@ -83,7 +78,6 @@ const deudaCompra = async (cantidad, id) => {
             debt: true
         }
     });
-    console.log("deudacompra debt", compra.debt);
 
     const deuda = compra.debt - cantidad;
 
@@ -94,9 +88,9 @@ const deudaCompra = async (cantidad, id) => {
         data: {
             debt: deuda
 
+            
         }
     });
-    console.log("actaulizacion deuda", respuesta.debt);
     return respuesta;
 }
 
@@ -197,7 +191,7 @@ const editarAbono = async (req, res) => {
         }
         
         // First restore the original debt by adding back the previous payment
-        await deudaCompra(-abonoAnterior.amount, purchaseId);
+     
         
         // Check if new amount is valid for current debt
         const deudaActual = await prisma.purchase.findUnique({
@@ -209,11 +203,13 @@ const editarAbono = async (req, res) => {
             }
         });
         
+        console.log("Mirar: ", amount, deudaActual.debt);
         const nuevaDeuda = deudaActual.debt - amount;
         
         if (nuevaDeuda < 0) {
             return res.status(400).json("El monto del abono no puede ser mayor que la deuda");
         }
+        await deudaCompra(-abonoAnterior.amount, purchaseId);
         
         // Update payment record
         const fecha = new Date(date).toISOString();
