@@ -8,7 +8,7 @@ const cors = require("cors");
 
 app.use(cors(
     {
-        origin: "*",
+        origin: "http://26.241.225.40:3001",
         methods: "GET,POST,PUT,DELETE",
         allowedHeaders: "Content-Type, Authorization"
     }
