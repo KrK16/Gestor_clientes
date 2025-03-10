@@ -216,9 +216,15 @@ const editarAbono = async (req, res) => {
         // Check if new amount is valid for current debt
    
 
-
-       
-        
+        const deudaActual = await prisma.purchase.findUnique({
+            where: {
+                id: parseInt(purchaseId)
+            },
+            select: {
+                debt: true
+            }
+        });
+             
         const nuevaDeuda = deudaActual.debt - amount + abonoAnterior.amount;
 
         
