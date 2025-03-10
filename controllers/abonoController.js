@@ -146,6 +146,26 @@ const eliminarAbono = async (req, res) => {
             }
         });
 
+        const debtmiss = await prisma.purchase.findUnique({
+            where: {
+                id: devuelta.purchaseId
+            },
+            select: {
+                debt: true
+            }
+        });
+
+        if(debtmiss.debt > 0){
+        const estado = await prisma.purchase.update({
+                where: {
+                    id: devuelta.purchaseId
+                },
+                data: {
+                    status: "pendiente"
+                }
+            });
+        }
+
         const respuesta = await prisma.payment.delete({
             where: {
                 id: parseInt(id)
@@ -194,22 +214,21 @@ const editarAbono = async (req, res) => {
      
         
         // Check if new amount is valid for current debt
-        const deudaActual = await prisma.purchase.findUnique({
-            where: {
-                id: purchaseId
-            },
-            select: {
-                debt: true
-            }
-        });
+   
+
+
+       
         
-        console.log("Mirar: ", amount, deudaActual.debt);
-        const nuevaDeuda = deudaActual.debt - amount;
+        const nuevaDeuda = deudaActual.debt - amount + abonoAnterior.amount;
+
         
         if (nuevaDeuda < 0) {
             return res.status(400).json("El monto del abono no puede ser mayor que la deuda");
         }
+        
+        // Update debt
         await deudaCompra(-abonoAnterior.amount, purchaseId);
+
         
         // Update payment record
         const fecha = new Date(date).toISOString();
