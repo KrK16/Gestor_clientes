@@ -18,6 +18,7 @@ const obtenerCompras = async (req, res) => {
 
 const agregarCompra = async (req, res) => {
     const { customer_id, productos, name, payday, orderdate } = req.body;
+    console.log(productos[0].price)
     let precioTotal = precioCompra(productos);
     const formatofechaorderdate = new Date(orderdate).toISOString();
 
@@ -61,10 +62,15 @@ el precio de total de la compra en base al precio de los productos y la cantidad
 // Agregar precio total de la compra
 
 const precioCompra = (productos) => {
+    console.log(productos)
     let precio = 0;
-    productos.forEach(producto => {
+    
+    // Verificar si productos es un array o un objeto individual
+    const productosArray = Array.isArray(productos) ? productos : [productos];
+    
+    productosArray.forEach(producto => {
         precio += producto.price * producto.quantity;
-
+        console.log(precio)
     });
     return precio;
 }
